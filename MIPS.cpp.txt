@@ -1,0 +1,278 @@
+/*On my honor,I have neither given nor received any unauthorized aid on this assignment*/
+
+#include<iostream>
+#include<string>
+#include<vector>
+#include<fstream>
+#include<list>
+#include<map>
+
+using namespace std;
+
+list<string> instruct;
+map<int, int> regmap;
+map<int, int> datamap;
+list<string> instbuffer;
+list<string> arithbuffer;
+list<string> ldbuffer;
+list<string> addrbuffer;
+list<string> resbuffer;
+int tokenCount = 0;
+
+ofstream out;
+
+void print()
+{
+	if (out.is_open())
+	{
+		list<string>::iterator i;
+		map<int, int>::iterator j;
+		out << "INM:";
+		for (i = instruct.begin(); i != instruct.end(); i++)
+		{
+			out << *i;
+			if (instruct.back() != *i)
+				out << ",";
+		}
+		out << "\nINB:";
+		for (i = instbuffer.begin(); i != instbuffer.end(); i++)
+		{
+			out << *i;
+			if (instbuffer.back() != *i)
+				out << ",";
+		}
+		out << "\nAIB:";
+		for (i = arithbuffer.begin(); i != arithbuffer.end(); i++)
+		{
+			out << *i;
+			if (arithbuffer.back() != *i)
+				out << ",";
+		}
+		out << "\nLIB:";
+		for (i = ldbuffer.begin(); i != ldbuffer.end(); i++)
+		{
+			out << *i;
+			if (ldbuffer.back() != *i)
+				out << ",";
+		}
+		out << "\nADB:";
+		for (i = addrbuffer.begin(); i != addrbuffer.end(); i++)
+		{
+			out << *i;
+			if (addrbuffer.back() != *i)
+				out << ",";
+		}
+		out << "\nREB:";
+		for (i = resbuffer.begin(); i != resbuffer.end(); i++)
+		{
+			out << *i;
+			if (resbuffer.back() != *i)
+				out << ",";
+		}
+		out << "\nRGF:";
+		for (j = regmap.begin(); j != regmap.end(); j++)
+		{
+			out << "<R" << j->first << "," << j->second << ">";
+			if (j != --regmap.end())
+				out << ",";
+		}
+		out << "\nDAM:";
+		for (j = datamap.begin(); j != datamap.end(); j++)
+		{
+			out << "<" << j->first << "," << j->second << ">";
+			if (j != --datamap.end())
+				out << ",";
+		}
+		out << "\n";
+	}
+}
+
+void readndecode()
+{
+	string str = instruct.front();
+	instruct.pop_front();
+	int index1, index2, value1, value2, i;
+	string mapind;
+	index1 = 9;
+	if (str[1] == 'L')
+		index1 = 8;
+	mapind = str[index1];
+	value1 = regmap[stoi(mapind)];
+	i = index1 + 1;
+	if (str[1] == 'L')
+	{
+		while (str[i] != ',')
+			i++;
+	}
+	else
+	{
+		while (str[i] != 'R')
+			i++;
+	}
+	index2 = ++i;
+	if (str[1] == 'L')
+	{
+		//mapind = str[index2];
+		//value2 = datamap[stoi(mapind)];
+		//str.replace(index2,1,to_string(value2));
+	}
+	else
+	{
+		mapind = str[index2];
+		value2 = regmap[stoi(mapind)];
+		str.replace(index2 - 1, 2, to_string(value2));
+	}
+	str.replace(index1 - 1, 2, to_string(value1));
+	instbuffer.push_back(str);
+}
+
+void issue()
+{
+	string str = instbuffer.front();
+	instbuffer.pop_front();
+	if (str[1] == 'L')
+		ldbuffer.push_back(str);
+	else
+		arithbuffer.push_back(str);
+}
+
+void addrcalc()
+{
+	string str = ldbuffer.front();
+	ldbuffer.pop_front();
+	int index1, index2, i, res;
+	string val1, val2, str1, regind;
+	regind = str[5];
+	index1 = 7;
+	i = index1;
+	val1 = str[i++];
+	while (str[i] != ',')
+		val1 += str[i++];
+	i++;
+	index2 = i;
+	val2 = str[i++];
+	while (str[i] != '>')
+		val2 += str[i++];
+	res = stoi(val1) + stoi(val2);
+	str1 = "<R" + regind + "," + to_string(res) + ">";
+	addrbuffer.push_back(str1);
+}
+
+void arithop()
+{
+	string str = arithbuffer.front(), str1;
+	arithbuffer.pop_front();
+	int i, index = 6, result;
+	string regind, val1, val2;
+	regind = str[index];
+	i = 8;
+	val1 = str[i++];
+	while (str[i] != ',')
+		val1 += str[i++];
+	i++;
+	val2 = str[i++];
+	while (str[i] != '>')
+		val2 += str[i++];
+	if (str[1] == 'A')
+		result = stoi(val1) + stoi(val2);
+	else
+		result = stoi(val1) - stoi(val2);
+	str1 = "<R" + regind + "," + to_string(result) + ">";
+	resbuffer.push_back(str1);
+}
+
+void load()
+{
+	string str = addrbuffer.front(), str1;
+	addrbuffer.pop_front();
+	string regind, val;
+	int i, res;
+	regind = str[2];
+	i = 4;
+	val = str[i++];
+	while (str[i] != '>')
+		val += str[i++];
+	res = datamap[stoi(val)];
+	str1 = "<R" + regind + "," + to_string(res) + ">";
+	resbuffer.push_back(str1);
+}
+
+void write()
+{
+	string str = resbuffer.front();
+	resbuffer.pop_front();
+	string regind, value;
+	regind = str[2];
+	int i = 4;
+	value = str[i++];
+	while (str[i] != '>')
+		value += str[i++];
+	regmap[stoi(regind)] = stoi(value);
+	tokenCount--;
+}
+
+int main()
+{
+
+	string str;
+	int s = 0;
+
+	ifstream infile;
+	infile.open("instructions.txt");
+
+	while (infile >> str)
+	{
+		instruct.push_back(str);
+		tokenCount++;
+	}
+	infile.close();
+
+	infile.open("registers.txt");
+	while (infile >> str)
+	{
+		string mapind, value;
+		mapind = str[2];
+		int index = 4;
+		value = str[index++];
+		while (str[index] != '>')
+			value += str[index++];
+		regmap[stoi(mapind)] = stoi(value);
+	}
+	infile.close();
+
+	infile.open("datamemory.txt");
+	while (infile >> str)
+	{
+		string mapind, value;
+		mapind = str[1];
+		int index = 3;
+		value = str[index++];
+		while (str[index] != '>')
+			value += str[index++];
+		datamap[stoi(mapind)] = stoi(value);
+	}
+	infile.close();
+
+	out.open("simulation.txt");
+
+	while (tokenCount>0)
+	{
+		out << "STEP " << s++ << ":\n";
+		print();
+		if (!resbuffer.empty())
+			write();
+		if (!addrbuffer.empty())
+			load();
+		if (!ldbuffer.empty())
+			addrcalc();
+		if (!arithbuffer.empty())
+			arithop();
+		if (!instbuffer.empty())
+			issue();
+		if (!instruct.empty())
+			readndecode();
+		out << "\n";
+	}
+	out << "STEP " << s++ << ":\n";
+	print();
+}
