@@ -1,0 +1,381 @@
+/* On my honor, I have neither given nor received unauthorized aid on this assignment */
+#include<iostream>
+#include<string>
+#include<vector>
+#include<utility>
+#include<algorithm>
+#include<fstream>
+#include<vector>
+#include<bitset>
+#include<cmath>
+
+using namespace std;
+ifstream infile;
+ofstream outfile;
+vector<string> vstr;
+vector<string> dictionary;
+string comstr;
+
+int findElem(vector<pair<string, int>> elemCount, int countSize, string str)
+{
+    for (int i = 0; i <= countSize; i++)
+    {
+        if (elemCount[i].first == str)
+            return i;
+    }
+    return -1;
+}
+
+int compare(pair<string,int> p1, pair<string,int> p2)
+{
+    return(p1.second > p2.second);
+}
+
+void constructDictionary(vector<string> vec)
+{
+    vector<pair<string, int>> elemCount(vec.size());
+    int countSize = 0;
+    elemCount[0].first = vec[0];
+    elemCount[0].second = 1;
+    int sizeOfAnElement = sizeof(elemCount[0]);
+    for (int i = 1; i < vec.size(); i++)
+    {
+        if (findElem(elemCount, countSize, vec[i]) >= 0)
+        {
+            elemCount[findElem(elemCount, countSize, vec[i])].second++;
+        }
+        else
+        {
+            countSize++;
+            elemCount[countSize].first = vec[i];
+            elemCount[countSize].second = 1;
+        }
+    }
+    sort(elemCount.begin(), elemCount.begin() + countSize, compare);
+    for (int i = 0; i < 8; i++)
+    {
+        dictionary.push_back(elemCount[i].first);
+    }
+}
+
+int findInDictionary(string str)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        if (str == dictionary[i])
+            return i;
+    }
+    return -1;
+}
+
+string findIndexInDictionary(int index)
+{
+    return dictionary[index];
+}
+
+string decimalToBinary(int number, int noOfBits)
+{
+    string str = "";
+    if (number == 0)
+    {
+        if (noOfBits == 3)
+            return "000";
+        else
+            return "00000";
+    }
+    while (number > 0)
+    {
+        str = to_string(number %2 ) + str;
+        number = number / 2;
+    }
+    while (str.size() < noOfBits)
+    {
+        str = "0" + str;
+    }
+    return str;
+}
+
+int binaryToDecimal(string index)
+{
+	int number = 0;
+
+	for(int i=0;i<index.size();i++)
+	{
+		if (index[i] == '1')
+		{
+			number += pow(2,index.size()-i-1);
+		}
+		
+	}
+    	
+	return number;
+}
+
+int noofmismatch(string str)
+{
+    int mismatch[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }, flag, smallest = 32;
+    for (int i = 0; i <8; i++)
+    {
+        flag = 0;
+        if (str != dictionary[i])
+        {
+            string temp = dictionary[i];
+            for (int j = 0; j <32; j++)
+            {
+                if (temp[j] != str[j])
+                {
+                    flag++;
+                }
+            }
+            mismatch[i] = flag;
+        }
+        if (mismatch[i] < smallest)
+        {
+            smallest = mismatch[i];
+        }
+    }
+    return smallest;
+}
+
+bool isneighbormismatch(string str, int& index)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        int count = 0;
+        string temp = dictionary[i];
+        for (int j = 0; j < 32; j++)
+        {
+            if (str[j] != temp[j])
+                count++;
+        }
+        if (count == 2)
+        {
+            for (int j = 0; j < 31; j++)
+            {
+                if (str[j] != temp[j] && str[j + 1] != temp[j + 1])
+                {
+                    index = i;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+void compression()
+{
+    string tempstr;
+    for (int i = 0; i < vstr.size(); i++)
+    {
+        //In case exact match is found
+        if (findInDictionary(vstr[i]) >= 0)
+        {
+            string bitIndex = decimalToBinary(findInDictionary(vstr[i]), 3);
+            comstr += "00";
+            comstr += bitIndex;
+        }
+        else if (noofmismatch(vstr[i]) == 2)
+        {
+            int index;
+            if (isneighbormismatch(vstr[i], index))
+            {
+                string dictionaryvalue = dictionary[index];
+                tempstr = vstr[i];
+                int i;
+                for (i = 0; i < 32; i++)
+                {
+                    if (tempstr[i] != dictionaryvalue[i])
+                        break;
+                }
+                comstr = comstr + "01" + decimalToBinary(i, 5) + decimalToBinary(index, 3);
+            }
+            else
+            {
+                tempstr = vstr[i];
+                int mainindex, index1, index2;
+                for (int j = 0; j < 8; j++)
+                {
+                    string temp = dictionary[j];
+                    int count = 0;
+                    for (int k = 0; k < 32; k++)
+                    {
+                        if (temp[k] != tempstr[k])
+                        {
+                            count++;
+                        }
+                    }
+                    if (count == 2)
+                    {
+                        mainindex = j;
+                        for (int k = 0; k < 32; k++)
+                        {
+                            if (temp[k] != tempstr[k])
+                            {
+                                index1 = k;
+                                break;
+                            }
+                        }
+                        for (int k = index1 + 1; k < 32; k++)
+                        {
+                            if (temp[k] != tempstr[k])
+                            {
+                                index2 = k;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+                comstr = comstr + "10" + decimalToBinary(index1, 5) + decimalToBinary(index2, 5) + decimalToBinary(mainindex, 3);
+            }
+        }
+        else
+        {
+            comstr += "11";
+            comstr += vstr[i];
+        }
+    }
+    int k;
+    for (k = 0; k < comstr.size(); k++)
+    {
+        if (k != 0 && k % 32 == 0)
+            outfile << "\n" << comstr[k];
+        else
+            outfile << comstr[k];
+    }
+    while (k % 32 != 0)
+    {
+        outfile << "1";
+        k++;
+    }
+    outfile << "\nxxxx";
+    for (int i = 0; i < 8; i++)
+    {
+        outfile << "\n" << dictionary[i];
+    }
+}
+
+void decompression(string str,vector<string> dict)
+{
+	int pos,pos1,pos2;
+	string index, decomstr;
+	
+	for(int i=0;i<str.size();i++)
+	{
+
+		string twobits = str.substr(i,2);
+		
+		if(twobits.compare("00") == 0)
+		{ 
+			index = str.substr(i+2,3);
+			//cout << index << "\n";
+			decomstr = findIndexInDictionary(binaryToDecimal(index));
+			vstr.push_back(decomstr);
+			i += 4;	
+		}
+		else if(twobits.compare("01") == 0)
+		{ 
+			pos = binaryToDecimal(str.substr(i+2,5));
+			index = str.substr(i+7,3);
+
+			//cout<< index << "\t";
+			//cout<< pos << "\n";
+
+			decomstr = findIndexInDictionary(binaryToDecimal(index));
+			if (decomstr[pos] == '1')
+				decomstr[pos] = '0';
+			else
+				decomstr[pos] = '1';
+
+			if (decomstr[pos+1] == '1')
+				decomstr[pos+1] = '0';
+			else
+				decomstr[pos+1] = '1';
+			
+			vstr.push_back(decomstr);
+			i += 9;	
+		}
+		else if(twobits.compare("10") == 0)
+		{
+			pos1 = binaryToDecimal(str.substr(i+2,5));
+			pos2 = binaryToDecimal(str.substr(i+7,5));
+			index = str.substr(i+12,3);
+
+			//cout<< index << "\t";
+			//cout<< pos << "\n";
+
+			decomstr = findIndexInDictionary(binaryToDecimal(index));
+			
+			if (decomstr[pos1] == '1')
+				decomstr[pos1] = '0';
+			else
+				decomstr[pos1] = '1';
+
+			if (decomstr[pos2] == '1')
+				decomstr[pos2] = '0';
+			else
+				decomstr[pos2] = '1';
+			
+			vstr.push_back(decomstr);
+			i += 14;
+		}
+		else
+		{
+			decomstr = str.substr(i+2,32);
+			vstr.push_back(decomstr);
+			i += 33;
+		
+		}
+	}
+
+}
+
+int main(int argc, char* argv[])
+{
+	char* par = argv[1];
+	if (*par == '1')
+	{
+
+		infile.open("original.txt");
+		outfile.open("cout.txt");
+		string str;
+		while (infile>>str)
+		{
+			vstr.push_back(str);
+		}
+		constructDictionary(vstr);
+		compression();
+	}
+
+	else if (*par == '2')
+	{
+
+		infile.open("compressed.txt");
+		outfile.open("dout.txt");
+		int flg = 0;
+		string str;
+		string comstr;
+		while (infile>>str)
+		{
+			if (str.compare("xxxx") == 0)
+			{
+				flg = 1;
+				continue;
+			}
+
+			if (flg == 1)
+				dictionary.push_back(str);
+			else
+				comstr.append(str);
+		}
+
+		decompression(comstr, dictionary);
+
+		for(int i=0;i<vstr.size();i++)
+		{
+			outfile << vstr[i] << "\n";
+		}
+	}
+	return 0;
+}
